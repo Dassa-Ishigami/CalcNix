@@ -9,6 +9,7 @@ const FileStore = require("session-file-store")(session);
 const funcoes = require("./js/funcoes");
 const rotaPro = require("./backend/produtosServ");
 const rotaCard = require("./backend/cardapiosServ");
+const rotaCalc = require("./backend/calculadoraServ");
 
 const app = exp();
 
@@ -42,6 +43,7 @@ app.use(exp.json({ limit: "5mb"})); // envia os dados do formulário de cadastro
 
 app.use("/api/produtos", rotaPro(exigirLogin));
 app.use("/api/cardapios", rotaCard(exigirLogin));
+app.use("/api/calculadora", rotaCalc(exigirLogin));
 
 app.use("/styles", exp.static(path.join(__dirname, "styles")));
 app.use("/js", exp.static(path.join(__dirname, "js")));

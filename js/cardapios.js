@@ -1,104 +1,86 @@
-const listaPrato = document.getElementById("listaAlimentos");
-const alimentosPrato = document.getElementById("alimentosPrato");
-const tCalorias = document.getElementById("totalCalorias");
-const tCusto = document.getElementById("totalCusto");
 
-let alimDisp = [];
-let alimSele = [];
+const cNomeCard = document.getElementById("nomeCardapio");
+const bCriar = document.getElementById("criarCardapio");
+const pnnCardapios = document.getElementById("pannelCardapio");
 
-async function carregarPrato() {
-    try {
-        const resposta = await fetch("/api/produtos", {
-            credentials: "include"
-        });
 
-        if (!resposta.ok) {
-            throw new Error("Não foi possível carregar os alimentos.");
-        }
+bCriar.addEventListener("click", async () => {
 
-        alimDisp = await resposta.json();
-        showAlimDisp();
+    const nome = cNomeCard.value.trim();
 
-    } catch (erro) {
-        console.error("Erro ao carregar alimentos para o prato:", erro);
-        listaPrato.textContent = "Erro ao carregar os alimentos.";
-    }
-}
-
-function showAlimDisp() {
-    listaPrato.innerHTML = "";
-
-    if (alimDisp.length === 0) {
-        listaPrato.textContent = "Nenhum alimento cadastrado.";
+    
+    if (!nome) {
+        alert("Nomeie o cardápio.")
         return;
     }
 
-    alimDisp.forEach(alimento => {
-        const linha = document.createElement("label");
-        const checkbox = document.createElement("input");
-
-        checkbox.type = "checkbox";
-        checkbox.value = alimento.id;
-
-        checkbox.addEventListener("change", () => {
-            if (checkbox.checked) {
-                alimSele.push({
-                    ...alimento,
-                    quantidade: 100
-                });
-            } else {
-                alimSele = alimSele.filter(
-                    item => item.id !== alimento.id
-                );
-            }
-
-            showSelected();
-            calcularTotais();
+    try {
+        const anwser = await fetch("/api/cardapios", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            credentials: "include",
+            body: JSON.stringify({
+                nome
+            })
         });
 
-        linha.append(checkbox, document.createTextNode(` ${alimento.nome}`));
-        listaPrato.appendChild(linha);
-        listaPrato.appendChild(document.createElement("br"));
+        const dadosCard = await anwser.json();
+
+        if (!anwser.ok) {
+            alert(dadosCard.erro || "Não foi possível criar o cardápio");
+            return;
+        }
+
+        alert("Cardápio criado com sucesso!");
+
+        cNomeCard.value = "";
+
+        await carregarCardapios();
+
+    } catch (erro) {
+        console.error("Erro ao criar cardápio:", erro);
+        alert("Sem conexão com o servidor");
+    }
+});
+
+function exibeCard(cardapios) {
+    pnnCardapios.querySelectorAll(".card-item").forEach(item => {
+        item.remove();
+    });
+
+    const modelCard = document.getElementById("modelCardapio");
+
+    if (!modelCard) {
+        console.error("Template não encontrado.");
+        return;
+    }
+
+    cardapios.forEach(cardapio => {
+        const copiaCard = modelCard.content.cloneNode(true);
+
+        copiaCard.querySelector(".cardapio-nome").textContent = cardapio.nome;
+
+        pnnCardapios.appendChild(copiaCard);
     });
 }
 
-function showSelected() {
-    alimentosPrato.innerHTML = "";
-
-    alimSele.forEach(alimento => {
-        const linha = document.createElement("div");
-        const nome = document.createElement("span");
-        const quantidade = document.createElement("input");
-
-        nome.textContent = `${alimento.nome} — Quantidade (g): `;
-        quantidade.type = "number";
-        quantidade.min = "0";
-        quantidade.step = "1";
-        quantidade.value = alimento.quantidade;
-
-        quantidade.addEventListener("input", () => {
-            alimento.quantidade = Math.max(0, Number(quantidade.value) || 0);
-            calcularTotais();
+async function carregarCardapios() {
+    try {
+        const anwser = await fetch("/api/cardapios", {
+            credentials: "include"
         });
 
-        linha.append(nome, quantidade);
-        alimentosPrato.appendChild(linha);
-    });
+        if (!anwser.ok) {
+            throw new Error("Não foi possível carregar os cardápios.");
+        }
+
+        const cardapios = await anwser.json();
+        exibeCard(cardapios);
+    } catch (erro) {
+        console.error("Erro ao carregar cardápios:", erro);
+    }
 }
 
-function calcularTotais() {
-    let calorias = 0;
-    let custo = 0;
-
-    alimSele.forEach(alimento => {
-        const qtdKg = alimento.quantidade / 1000;
-
-        calorias += Number(alimento.caloria) * qtdKg;
-        custo += Number(alimento.custo) * qtdKg;
-    });
-
-    tCalorias.textContent = calorias.toFixed(2);
-    tCusto.textContent = custo.toFixed(2).replace(".", ",");
-}
-
-carregarPrato();
+carregarCardapios();

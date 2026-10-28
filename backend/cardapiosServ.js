@@ -18,13 +18,11 @@ module.exports = function (exigirLogin) {
     });
 
     router.post("/", exigirLogin, (req, res) => {
-        const { nome, alimentos } = req.body;
+        const { nome } = req.body;
 
         if (
             typeof nome !== "string" ||
-            !nome.trim() ||
-            !Array.isArray(alimentos) ||
-            alimentos.length === 0
+            !nome.trim()
         ) {
             return res.status(400).json({
                 erro: "Preencha todos os campos."
@@ -37,7 +35,6 @@ module.exports = function (exigirLogin) {
             id: crypto.randomUUID(),
             usuarioId: req.session.usuario.id,
             nome: nome.trim(),
-            alimentos,
             criadoEm: new Date().toISOString()
         };
 

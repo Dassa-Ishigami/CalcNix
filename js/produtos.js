@@ -65,7 +65,7 @@ cadastrarBtn.addEventListener("click", async () => {
         await carregarPro();
 
     } catch (erro) {
-        console.error("Erro ao cadastrarBtn produto:", erro);
+        console.error("Erro ao cadastrar produto:", erro);
         alert("Sem conexão com o servidor");
     }
 });
