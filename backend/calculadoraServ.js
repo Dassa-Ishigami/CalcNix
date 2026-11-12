@@ -1,59 +1,94 @@
 const express = require("express");
 const crypto = require("crypto");
 const funcoes = require("../js/funcoes");
+const pool = require("../db");
 
 module.exports = function (exigirLogin) {
     const router = express.Router();
 
     // Pratos da conta conectada
-    router.get("/", exigirLogin, (req, res) => {
-        const pratos = funcoes.readPlate();
+    router.get("/", exigirLogin, async (req, res) => {
+        // const pratos = funcoes.readPlate();
 
-        const myPlates = pratos.filter(
-            prato => prato.usuarioId === req.session.usuario.id
-        );
+        // const myPlates = pratos.filter(
+        //     prato => prato.usuarioId === req.session.usuario.id
+        // );
+        try {
+            const result = await pool.query(
+                `SELECT
+                    id, 
+                    usuario_id AS "usuarioId",
+                    nome,
+                    porcoes,
+                    lucro,
+                    alimentos
+                FROM pratos
+                WHERE usuario_id = $1`,
+                [req.session.usuario.id]
+            );
 
-        res.status(200).json(myPlates);
-    });
+            const pratos = result.rows.map(receita => ({
+                ...receita,
+                porcoes: Number(receita.porcoes),
+                lucro: Number(receita.lucro)
+            }));
+            
+            res.status(200).json(myPlates);
+        
+        } catch (error) {
+            console.error("Erro ao buscar prato", error);
 
-    // Add novo prato
-    router.post("/", exigirLogin, (req, res) => {
-        const { nome, porcoes, lucro, alimentos } = req.body;
-
-        if (
-            typeof nome !== "string" ||
-            !nome.trim() ||
-            !Number.isInteger(Number(porcoes)) ||
-            Number(porcoes) < 1 ||
-            !Number.isFinite(Number(lucro)) ||
-            Number(lucro) <= 0 ||
-            !Array.isArray(alimentos) ||
-            alimentos.length === 0
-        ) {
-            return res.status(400).json({
-                erro: "Preencha os dados corretamente."
+            return res.status(500).json({
+                erro: "Erro ao buscar pratos."
             });
         }
 
-        const pratos = funcoes.readPlate();
+    });
 
-        const newPlate = {
-            id: crypto.randomUUID(),
-            usuarioId: req.session.usuario.id,
-            nome: nome.trim(),
-            porcoes: Number(porcoes),
-            lucro: Number(lucro),
-            alimentos: alimentos,
-            valorFinal: req.body.valorFinal
-        };
+    // Add novo prato
+    router.post("/", exigirLogin, async (req, res) => {
+        try {
+            
+        } catch (error) {
+            
+            const { nome, porcoes, lucro, alimentos } = req.body;
+    
+            if (
+                typeof nome !== "string" ||
+                !nome.trim() ||
+                !Number.isInteger(Number(porcoes)) ||
+                Number(porcoes) < 1 ||
+                !Number.isFinite(Number(lucro)) ||
+                Number(lucro) <= 0 ||
+                !Array.isArray(alimentos) ||
+                alimentos.length === 0
+            ) {
+                return res.status(400).json({
+                    erro: "Preencha os dados corretamente."
+                });
+            }
+    
+            const newPlate = {
+                id: crypto.randomUUID(),
+                usuarioId: req.session.usuario.id,
+                nome: nome.trim(),
+                porcoes: Number(porcoes),
+                lucro: Number(lucro),
+                alimentos: alimentos,
+                valorFinal: req.body.valorFinal
+            };
+    
+            await pool.query(
+                `INSERT INTO pratos
+                    (id, usuario_id, nome, porcoes, lucro, calorias)`
+            )
+    
+            res.status(201).json({
+                msg: "Prato cadastrado!",
+                prato: newPlate
+            });
+        }
 
-        pratos.push(newPlate);
-        funcoes.savePlate(pratos);
-
-        res.status(201).json({
-            msg: "Prato cadastrado!",
-            prato: newPlate
-        });
     });
 
     // Consulta o último INPC registrado

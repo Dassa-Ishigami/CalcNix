@@ -7,6 +7,7 @@ const session = require("express-session");
 const fs = require("fs");
 const FileStore = require("session-file-store")(session);
 const funcoes = require("./js/funcoes");
+const pool = require("./db");
 const rotaPro = require("./backend/produtosServ");
 const rotaCard = require("./backend/cardapiosServ");
 const rotaCalc = require("./backend/calculadoraServ");
@@ -74,18 +75,6 @@ app.post("/cadastro", async (req, res) => {
         const newNome = nome.trim();
         const newEmail = email.trim().toLowerCase();
 
-        const usuario = funcoes.readUser();
-
-        const userExist = usuario.find(
-            user => user.email.toLowerCase() === newEmail
-        );
-
-        if (userExist) {
-            return res.status(409).json({
-                msg: "Email já cadastrado."
-            });
-        }
-
         const newUser = {
             id: require("crypto").randomUUID(),
             nome: newNome,
@@ -93,15 +82,45 @@ app.post("/cadastro", async (req, res) => {
             senha: await bcrypt.hash(senha, 12)
         };
 
-        usuario.push(newUser);
-        funcoes.saveUsers(usuario);
+        // const usuario = funcoes.readUser();
+
+        // const userExist = usuario.find(
+        //     user => user.email.toLowerCase() === newEmail
+        // );
+
+        // if (userExist) {
+        //     return res.status(409).json({
+        //         msg: "Email já cadastrado."
+        //     });
+        // }
+
+
+        // usuario.push(newUser);
+        // funcoes.saveUsers(usuario);
+
+        await pool.query( //Coloca os atributos dentro da tabela
+            `INSERT INTO usuarios (id, nome, email, senha)
+            VALUES ($1, $2, $3, $4)`, 
+            [
+                newUser.id,
+                newUser.nome,
+                newUser.email,
+                newUser.senha
+            ]
+        );
 
         return res.status(201).json({
             msg: "Cadastro"
         });
 
     } catch (error) {
-        console.error("Errouu", error);
+        if (error.code === "23505") {
+            return res.status(409).json({
+                msg: "Email já cadastrado."
+            });
+        }
+
+        console.error("Erro", error);
 
         return res.status(500).json({
             error: "Sem conclusão."
@@ -126,11 +145,18 @@ app.post("/login", async (req, res) => {
         }
 
         const checkEmail = email.trim().toLowerCase();
-        const usuario = funcoes.readUser();
+        // const usuario = funcoes.readUser();
 
-        const userExist = usuario.find(
-            user => user.email.toLowerCase() === checkEmail
+        // const userExist = usuario.find(
+        //     user => user.email.toLowerCase() === checkEmail
+        // );
+
+        const result = await pool.query(
+            "SELECT * FROM usuarios WHERE email = $1",
+            [checkEmail]
         );
+
+        const userExist = result.rows[0];
 
         if (!userExist) {
             return res.status(401).json({
